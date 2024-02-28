@@ -16,18 +16,10 @@ src/embedder: Embedding of inputs into embedding space,
     losses.
     Valid training styles:
         - CSM (Causal Sequence Modeling)
-        - BERT (Sequence-BERT)
-        - NetBERT (Network-BERT)
-        - autoencoder
         - decoding
 src/decoder: Model architecture used for decoding / sequence modeling. 
     One of the following:
         - GPT
-        - BERT
-        - NetBERT
-        - autoencoder
-        - LinearBaseline
-        - PretrainedGPT2 (as provided by HuggingFace)
         - PretrainedBERT (as provided by HuggingFace)
 src/unembedder: Projecting sequence output of decoder back 
     to input space.
@@ -134,7 +126,6 @@ def train(config: Dict=None) -> Trainer:
     
     assert config["architecture"] in {
         'GPT',
-        'autoencoder',
         'PretrainedGPT2'
     }, f'{config["architecture"]} is not supported.'
     
@@ -168,9 +159,7 @@ def train(config: Dict=None) -> Trainer:
         
     else:
         system_path = '/home'
-        files = exclude_sz_subs('sub_list2.csv', lower_bound=500, upper_bound=1000000)#9988
-        # root_path = "../tuh_tensors_itpl/"
-        # files = read_threshold_sub('sub_list2.csv', lower_bound=1000, upper_bound=1000000)# time len
+        files = read_threshold_sub('sub_list2.csv', lower_bound=500, upper_bound=1000000)# time len
         root_path = system_path + "tuh_tensors/"
      
         random.shuffle(files)
@@ -415,8 +404,7 @@ def get_config(args: argparse.Namespace=None) -> Dict:
             if 'Pretrained' not in args.architecture:
                 args.run_name += f'_lrs-{args.num_hidden_layers}'
 
-                if args.architecture != 'autoencoder':
-                    args.run_name += f'_hds-{args.num_attention_heads}'
+                args.run_name += f'_hds-{args.num_attention_heads}'
 
             # args.run_name += f'_embd-{args.embedding_dim}'
             # args.run_name += f'_train-{args.training_style}'
@@ -427,7 +415,7 @@ def get_config(args: argparse.Namespace=None) -> Dict:
             args.run_name += f'_NumChunks-{args.num_chunks}'
             args.run_name += f'_ovlp-{args.chunk_ovlp}'
 
-            if args.training_style not in {'decoding', 'autoencoder', 'CSM'}:
+            if args.training_style not in {'decoding', 'CSM'}:
                 args.run_name += f'_msk-{str(args.masking_rate).replace(".", "")}'
 
         else:
