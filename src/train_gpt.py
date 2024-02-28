@@ -43,7 +43,7 @@ from encoder.conformer_braindecode import EEGConformer
 from torch import manual_seed
 import sys
 
-from utils import cv_split_bci, read_threshold_sub, read_threshold_sub_tar, exclude_epi_subs, exclude_sz_subs
+from utils import cv_split_bci, read_threshold_sub, exclude_epi_subs, exclude_sz_subs
 script_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(script_path, '../'))
 # from batcher.make import make_batcher
@@ -53,7 +53,6 @@ from embedder.make import make_embedder
 from trainer.make import make_trainer
 from trainer.base import Trainer
 from decoder.unembedder import make_unembedder
-from tools.visualize import plot_model_graph
 
 os.environ["WANDB_DISABLED"] = "true"
 
@@ -219,16 +218,6 @@ def train(config: Dict=None) -> Trainer:
         deepspeed=config["deepspeed"],
     )
 
-    if config["plot_model_graph"]:
-        plot_model_graph(
-            model=trainer.model,
-            dataloader=trainer.get_train_dataloader(),
-            path=os.path.join(
-                config["log_dir"],
-                'model_graph'
-            )
-        )
-    # pdb.set_trace()
     if config['do_train']:
         trainer.train(resume_from_checkpoint=config["resume_from"])
         trainer.save_model(
