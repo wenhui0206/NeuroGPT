@@ -10,8 +10,7 @@ def make_decoder(
     intermediate_dim_factor: int=4,
     n_positions: int = 512,
     hidden_activation: str='gelu_new',
-    dropout: float = 0.1,
-    autoen_teacher_forcing_ratio: float = 0.5
+    dropout: float = 0.1
     ) -> torch.nn.Module:
     """
     Make a decoder object.
@@ -55,8 +54,6 @@ def make_decoder(
         Dropout ratio for attendion heads and residual layers
         of transofmer models and between LSTM layers of 
         encoder / decoder parts of autoencoder models. 
-    autoen_teacher_forcing_ratio: float
-        The ratio of teacher forcing for the autoencoder.
 
     Core methods:
     -----
@@ -81,8 +78,7 @@ def make_decoder(
         "intermediate_dim_factor": intermediate_dim_factor,
         "n_positions": n_positions,
         "hidden_activation": hidden_activation,
-        "dropout": dropout,
-        "teacher_forcing_ratio": autoen_teacher_forcing_ratio
+        "dropout": dropout
     }
 
     if architecture == 'GPT':

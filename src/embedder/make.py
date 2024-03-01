@@ -9,7 +9,6 @@ def make_embedder(
     in_dim: int=1024,
     embed_dim: int=768,
     num_hidden_layers: int=1,
-    masking_rate: float=0.2,
     dropout: float=0.1,
     t_r_precision: float = 0.2, # in seconds
     max_t_r: float = 300, # in seconds (= 10min)
@@ -43,8 +42,6 @@ def make_embedder(
         model. If more than one layers are used, all
         layers except the last one are activated through
         Gelu activation (see src.base.EmbeddingModel).
-    masking_rate: float
-        Masking rate used for BERT-style models.
     dropout: float
         Dropout rate used emebdding model.
     t_r_precision: float
@@ -83,7 +80,6 @@ def make_embedder(
         "in_dim": in_dim,
         "embed_dim": embed_dim,
         "num_hidden_layers": num_hidden_layers,
-        "masking_rate": masking_rate,
         "dropout": dropout,
         "t_r_precision": t_r_precision,
         "max_t_r": max_t_r,

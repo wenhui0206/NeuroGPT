@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-
-from fileinput import filename
-from operator import le
-import pdb
-from tracemalloc import start
-from typing import Dict, Tuple, Generator
 import numpy as np
 from typing import Dict
 # import webdataset as wds
@@ -12,7 +6,6 @@ import torch
 import gzip
 import pickle
 import h5py
-import webdataset as wds
 
 from torch.utils.data import Dataset
 

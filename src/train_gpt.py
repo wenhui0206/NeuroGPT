@@ -43,7 +43,7 @@ from encoder.conformer_braindecode import EEGConformer
 from torch import manual_seed
 import sys
 
-from utils import cv_split_bci, read_threshold_sub, exclude_epi_subs, exclude_sz_subs
+from utils import cv_split_bci, read_threshold_sub
 script_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(script_path, '../'))
 # from batcher.make import make_batcher
@@ -157,8 +157,8 @@ def train(config: Dict=None) -> Trainer:
         test_dataset = train_dataset
         
     else:
-        system_path = '/home'
-        files = read_threshold_sub('sub_list2.csv', lower_bound=500, upper_bound=1000000)# time len
+        system_path = '/home/wenhui/scratch1/wenhuicu/'
+        files = read_threshold_sub('../inputs/sub_list2.csv', lower_bound=500, upper_bound=1000000)# time len
         root_path = system_path + "tuh_tensors/"
      
         random.shuffle(files)
@@ -281,7 +281,6 @@ def make_model(model_config: Dict=None):
         dropout=model_config["dropout"],
         t_r_precision=model_config["tr_precision"],
         max_t_r=model_config["tr_max"],
-        masking_rate=model_config["masking_rate"],
         n_positions=model_config["n_positions"]
     )
     decoder = make_decoder(
@@ -292,8 +291,7 @@ def make_model(model_config: Dict=None):
         n_positions=model_config["n_positions"],
         intermediate_dim_factor=model_config["intermediate_dim_factor"],
         hidden_activation=model_config["hidden_activation"],
-        dropout=model_config["dropout"],
-        autoen_teacher_forcing_ratio=model_config["autoen_teacher_forcing_ratio"],
+        dropout=model_config["dropout"]
     )
 
     if model_config["embedding_dim"] != model_config["parcellation_dim"]:
@@ -403,9 +401,6 @@ def get_config(args: argparse.Namespace=None) -> Dict:
             args.run_name += f'_ChunkLen-{args.chunk_len}'
             args.run_name += f'_NumChunks-{args.num_chunks}'
             args.run_name += f'_ovlp-{args.chunk_ovlp}'
-
-            if args.training_style not in {'decoding', 'CSM'}:
-                args.run_name += f'_msk-{str(args.masking_rate).replace(".", "")}'
 
         else:
             args.run_name += f'_train-{args.training_style}'
@@ -909,6 +904,33 @@ def get_args() -> argparse.ArgumentParser:
              '(default: True). '
              'If "False", train() still returns trainer'
     )
+    parser.add_argument(
+        '--tr-max',
+        metavar='INT',
+        default=300,
+        type=int,
+        help='maximum number of TRs in TR-embeddings '
+             '(in seconds; default: 300)'
+    )
+    parser.add_argument(
+        '--tr-precision',
+        metavar='FLOAT',
+        default=0.2,
+        type=float,
+        help='precision (ie., frequency) of TR embeddings '
+             '(in seconds; default: 0.2). '
+             'When set to 0.2, embeddings are created for: '
+             '0, 0.2, 0.4, ..., tr-max'
+    )
+    parser.add_argument(
+        '--n-positions',
+        metavar='INT',
+        default=512,
+        type=int,
+        help='maximum sequence length that transformer model might ever be used with '
+             '(default: 512)'
+    )
+    ## EEG settings
     parser.add_argument(
         '--chunk_len',
         default=500,
