@@ -157,8 +157,8 @@ def train(config: Dict=None) -> Trainer:
         test_dataset = train_dataset
         
     else:
-        system_path = '/home/wenhui/scratch1/wenhuicu/'
-        files = read_threshold_sub('../inputs/sub_list2.csv', lower_bound=500, upper_bound=1000000)# time len
+        system_path = ''
+        files = read_threshold_sub('../inputs/sub_list2.csv', lower_bound=1000, upper_bound=1000000)# time len
         root_path = system_path + "tuh_tensors/"
      
         random.shuffle(files)
