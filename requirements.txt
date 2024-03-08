@@ -1,0 +1,8 @@
+einops==0.7
+h5py==3.10
+pandas==2.2
+scikit-learn==1.4
+scipy==1.12
+torch==2.2
+torchinfo==1.8
+transformers==4.38
