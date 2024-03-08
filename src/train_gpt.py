@@ -134,7 +134,7 @@ def train(config: Dict=None) -> Trainer:
 
     #handles the input part, which are the output from encoder.
     if config["training_style"] == 'decoding':
-        downstream_path = "../bci2a_egg_npz/"
+        downstream_path = config["dst_data_path"]
       
         train_folds, test_folds = cv_split_bci(sorted(os.listdir(downstream_path))[:18])
         train_files = train_folds[config['fold_i']]
@@ -155,7 +155,7 @@ def train(config: Dict=None) -> Trainer:
         test_dataset = train_dataset
         
     else:
-        root_path = config["data_path"]
+        root_path = config["train_data_path"]
         files = read_threshold_sub('../inputs/sub_list2.csv', lower_bound=1000, upper_bound=1000000)# time len
      
         random.shuffle(files)
@@ -434,9 +434,18 @@ def get_args() -> argparse.ArgumentParser:
 
     # Data pipeline settings:
     parser.add_argument(
-        '--data-path',
+        '--train-data-path',
         metavar='DIR',
         default='../../tuh_tensors/',
+        type=str,
+        help='path to training data directory '
+             '(default: data/upstream)'
+    )
+
+    parser.add_argument(
+        '--dst-data-path',
+        metavar='DIR',
+        default="../../bci2a_egg_npz/",
         type=str,
         help='path to training data directory '
              '(default: data/upstream)'
