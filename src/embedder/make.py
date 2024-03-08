@@ -10,8 +10,6 @@ def make_embedder(
     embed_dim: int=768,
     num_hidden_layers: int=1,
     dropout: float=0.1,
-    t_r_precision: float = 0.2, # in seconds
-    max_t_r: float = 300, # in seconds (= 10min)
     n_positions: int=512
     ) -> torch.nn.Module:
     """
@@ -44,12 +42,6 @@ def make_embedder(
         Gelu activation (see src.base.EmbeddingModel).
     dropout: float
         Dropout rate used emebdding model.
-    t_r_precision: float
-        The precision of the repetition time (ie., TR) 
-        embedding (in seconds).
-    max_t_r: float
-        The maximum repetition time (in seconds) that
-        the model can handle (in seconds).
     n_positions: int
         The maximum number of sequence elements that
         the model can handle (in sequence elements).
@@ -81,8 +73,6 @@ def make_embedder(
         "embed_dim": embed_dim,
         "num_hidden_layers": num_hidden_layers,
         "dropout": dropout,
-        "t_r_precision": t_r_precision,
-        "max_t_r": max_t_r,
         "n_positions": n_positions
     }
 
@@ -93,13 +83,6 @@ def make_embedder(
     elif training_style == 'CSM':
         from embedder.csm import CSMEmbedder
         embedder = CSMEmbedder(**kwargs)
-    # elif training_style == 'MSM':
-    #     from embedder.msm import MSMEmbedder
-    #     embedder = MSMEmbedder(**kwargs)
-
-    # elif training_style == 'MNM':
-    #     from embedder.mnm import MNMEmbedder
-    #     embedder = MNMEmbedder(**kwargs)
     
     elif training_style == 'decoding':
 
@@ -107,23 +90,6 @@ def make_embedder(
             from embedder.csm import CSMEmbedder
             embedder = CSMEmbedder(**kwargs)
         
-        # elif architecture in {
-        #     'BERT',
-        #     'PretrainedBERT',
-        #     'PretrainedDistilBERT',
-        #     'PretrainedRoBERTa'
-        # }:
-            # from src.embedder.bert import BERTEmbedder
-            # embedder = BERTEmbedder(**kwargs)
-
-        # elif architecture == 'NetBERT':
-        #     from src.embedder.netbert import NetBERTEmbedder
-        #     embedder = NetBERTEmbedder(**kwargs)
-
-        # elif architecture == 'LinearBaseline':
-        #     from src.embedder.dummy import DummyEmbedder
-        #     embedder = DummyEmbedder(**kwargs)
-
         else:
             raise ValueError('unkown architecture')
 

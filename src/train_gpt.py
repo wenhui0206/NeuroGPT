@@ -142,37 +142,32 @@ def train(config: Dict=None) -> Trainer:
 
         train_dataset = MotorImageryDataset(train_files, sample_keys=[
                 'inputs',
-                'attention_mask',
-                't_rs'
-            ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], tr=config["chunk_len"]/config["sampling_rate"], ovlp=config["chunk_ovlp"], root_path=downstream_path, gpt_only= not config["use_encoder"])
+                'attention_mask'
+            ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=downstream_path, gpt_only= not config["use_encoder"])
         # pdb.set_trace()
         
         test_dataset = MotorImageryDataset(test_files, sample_keys=[
                 'inputs',
-                'attention_mask',
-                't_rs'
-            ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], tr=config["chunk_len"]/config["sampling_rate"], ovlp=config["chunk_ovlp"], root_path=downstream_path, gpt_only= not config["use_encoder"])
+                'attention_mask'
+            ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=downstream_path, gpt_only= not config["use_encoder"])
        
         validation_dataset = test_dataset
         test_dataset = train_dataset
         
     else:
-        system_path = ''
+        root_path = config["data_path"]
         files = read_threshold_sub('../inputs/sub_list2.csv', lower_bound=1000, upper_bound=1000000)# time len
-        root_path = system_path + "tuh_tensors/"
      
         random.shuffle(files)
         train_dataset = EEGDataset(files[1000:], sample_keys=[
             'inputs',
-            'attention_mask',
-            't_rs'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], tr=config["chunk_len"]/config["sampling_rate"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+            'attention_mask'
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
 
         validation_dataset = EEGDataset(files[:1000], sample_keys=[
             'inputs',
-            'attention_mask',
-            't_rs'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], tr=config["chunk_len"]/config["sampling_rate"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+            'attention_mask'
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
 
         test_dataset = None
 
@@ -279,8 +274,6 @@ def make_model(model_config: Dict=None):
         embed_dim=model_config["embedding_dim"],
         num_hidden_layers=model_config["num_hidden_layers_embedding_model"],
         dropout=model_config["dropout"],
-        t_r_precision=model_config["tr_precision"],
-        max_t_r=model_config["tr_max"],
         n_positions=model_config["n_positions"]
     )
     decoder = make_decoder(
@@ -441,9 +434,9 @@ def get_args() -> argparse.ArgumentParser:
 
     # Data pipeline settings:
     parser.add_argument(
-        '--data',
+        '--data-path',
         metavar='DIR',
-        default='data/upstream',
+        default='../../tuh_tensors/',
         type=str,
         help='path to training data directory '
              '(default: data/upstream)'
@@ -904,24 +897,7 @@ def get_args() -> argparse.ArgumentParser:
              '(default: True). '
              'If "False", train() still returns trainer'
     )
-    parser.add_argument(
-        '--tr-max',
-        metavar='INT',
-        default=300,
-        type=int,
-        help='maximum number of TRs in TR-embeddings '
-             '(in seconds; default: 300)'
-    )
-    parser.add_argument(
-        '--tr-precision',
-        metavar='FLOAT',
-        default=0.2,
-        type=float,
-        help='precision (ie., frequency) of TR embeddings '
-             '(in seconds; default: 0.2). '
-             'When set to 0.2, embeddings are created for: '
-             '0, 0.2, 0.4, ..., tr-max'
-    )
+    
     parser.add_argument(
         '--n-positions',
         metavar='INT',

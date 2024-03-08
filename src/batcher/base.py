@@ -32,7 +32,7 @@ def _pad_seq_right_to_n(
     )
 
 class EEGDataset(Dataset):
-    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, tr=2.0, ovlp=50, root_path="", population_mean=0, population_std=1, gpt_only=False, normalization=True, start_samp_pnt=-1):
+    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, ovlp=50, root_path="", population_mean=0, population_std=1, gpt_only=False, normalization=True, start_samp_pnt=-1):
         if root_path == "":
             self.filenames = filenames
         else:
@@ -43,8 +43,6 @@ class EEGDataset(Dataset):
         # self.data = data_all
         self.chunk_len = chunk_len
         self.num_chunks = num_chunks
-        self.tr = tr # the length of chunk in seconds, not real sampling rate of eeg.
-        #this means the tr between chunks.
         self.ovlp = ovlp
         self.sample_keys = sample_keys
         self.mean = population_mean
@@ -137,14 +135,11 @@ class EEGDataset(Dataset):
         labels=None
         ) -> Dict[str, torch.Tensor]:
         out = {}
-        t_r = self.tr
         if self.do_normalization:
             sample = self.normalize(sample)
 
         chunks, seq_on = self.split_chunks(sample, self.chunk_len, self.ovlp, seq_len, self.start_samp_pnt)
-        # chunks = self.normalize(chunks)
 
-        t_rs = np.arange(seq_len) * t_r
         attention_mask = np.ones(seq_len)
         chunks = self._pad_seq_right_to_n(
             seq=chunks,
@@ -152,11 +147,6 @@ class EEGDataset(Dataset):
             pad_value=0
         )
 
-        t_rs = self._pad_seq_right_to_n(
-            seq=t_rs,
-            n=seq_len,
-            pad_value=0
-        )
         attention_mask = self._pad_seq_right_to_n(
             seq=attention_mask, 
             n=seq_len,
@@ -166,7 +156,6 @@ class EEGDataset(Dataset):
         if self.gpt_only == True:
             chunks = np.reshape(chunks, (seq_len, chunks.shape[1]*chunks.shape[2]))
         out["inputs"] = torch.from_numpy(chunks).to(torch.float)
-        out['t_rs'] = torch.from_numpy(t_rs).to(torch.float)
         out["attention_mask"] = torch.from_numpy(attention_mask).to(torch.long)
         out['seq_on'] = seq_on
         out['seq_len'] = seq_len
@@ -179,8 +168,6 @@ class EEGDataset(Dataset):
             }
 
         if labels is not None:
-            # chunk_labels = np.ones(seq_len) * labels
             out['labels'] = torch.from_numpy(np.array(labels)).to(torch.long)
-        # out['labels'] = np.zeros_like(t_rs)
-        # pdb.set_trace()
+   
         return out

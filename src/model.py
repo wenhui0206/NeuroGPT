@@ -198,7 +198,7 @@ class Model(torch.nn.Module):
                 return (outputs, batch) if return_batch else outputs
 
             b, f1, f2 = features.size()
-            nchunks = batch['t_rs'].size()[1]
+            nchunks = batch['inputs'].size()[1]
             batch['inputs'] = features.view(b//nchunks, nchunks, f1*f2)
         
         if prep_batch:

@@ -85,8 +85,6 @@ class BaseEmbedder(torch.nn.Module):
         embed_dim: int = 768,
         num_hidden_layers: int = 1,
         dropout: float = 0.1,
-        t_r_precision: int = 0.2, # in seconds
-        t_r_max: int = 300, # in seconds (= 10min)
         **kwargs
         ) -> None:
         super().__init__()
@@ -96,9 +94,6 @@ class BaseEmbedder(torch.nn.Module):
         self.in_dim = in_dim
         self.embed_dim = embed_dim
         self.num_hidden_layers = num_hidden_layers
-        self.t_r_precision = t_r_precision
-        self.t_r_max = t_r_max
-        self.num_t_r_embeddings = int(self.t_r_max / self.t_r_precision)
         self.dropout = dropout
         self.xe_loss = torch.nn.CrossEntropyLoss(reduction='mean')
         self.bxe_loss = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -111,10 +106,6 @@ class BaseEmbedder(torch.nn.Module):
             embed_dim=self.embed_dim,
             num_hidden_layers=self.num_hidden_layers,
             dropout=self.dropout
-        )
-        self.wt_re = torch.nn.Embedding(
-            num_embeddings=self.num_t_r_embeddings + 1, # we add one "dummy" t_r_embedding for cls/seq/msk_emebds
-            embedding_dim=self.embed_dim,
         )
         self.is_decoding_mode = False
 
@@ -156,49 +147,25 @@ class BaseEmbedder(torch.nn.Module):
         ) -> torch.tensor:
         return torch.round(x / precision) * precision
 
-    def convert_t_rs_to_position_ids(
-        self,
-        t_rs: torch.tensor
-        ) -> torch.tensor:
-        assert torch.max(t_rs) <= self.t_r_max, f'too many t_rs; maximum t_r is {self.t_r_max}'
-        t_rs_rounded = self._round_to_precision(
-            x=t_rs,
-            precision=self.t_r_precision
-        )
-        position_ids = (t_rs_rounded * int(1 / self.t_r_precision)).to(torch.long)
-        dummy_filler = torch.ones_like(position_ids) * self.num_t_r_embeddings # last embedding is dummy
-        return torch.where(
-            position_ids >= 0,
-            position_ids,
-            dummy_filler
-        )
 
     def embed_inputs(
         self,
         inputs: torch.tensor
         ) -> torch.tensor:
         return self.embed_model(inputs)
-
-    def embed_t_rs(
-        self,
-        t_rs: torch.tensor
-        ) -> torch.tensor:
-        t_r_position_ids = self.convert_t_rs_to_position_ids(t_rs=t_rs)
-        return self.wt_re(t_r_position_ids)
     
     def forward(
         self,
         batch: Dict[str, torch.tensor]
         ) -> torch.tensor:
         inputs_key = 'inputs' if 'inputs_embeds' not in batch else 'inputs_embeds'
-        assert batch[inputs_key].size()[:2] == batch['t_rs'].size(), f'{inputs_key} and t_rs must have equal dims 0 and 1'
-        assert torch.max(batch['t_rs']) < self.t_r_max, f'to many t_rs; max: {self.t_r_max-1} s'
+        
         if self.in_dim == self.embed_dim:
             inputs_embeds = batch[inputs_key]
         else:
             inputs_embeds = self.embed_inputs(inputs=batch[inputs_key])
-        t_r_embeds = self.embed_t_rs(t_rs=batch['t_rs'])
-        return inputs_embeds + t_r_embeds
+        
+        return inputs_embeds
 
     def decoding_loss(
         self,

@@ -6,8 +6,8 @@ from scipy.io import loadmat
 from scipy.signal import butter, filtfilt
 
 class MotorImageryDataset(EEGDataset):
-    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, tr=2.0, ovlp=50, root_path="", gpt_only=True):
-        super().__init__(filenames, sample_keys, chunk_len, num_chunks, tr, ovlp, root_path=root_path, gpt_only=gpt_only)
+    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, ovlp=50, root_path="", gpt_only=True):
+        super().__init__(filenames, sample_keys, chunk_len, num_chunks, ovlp, root_path=root_path, gpt_only=gpt_only)
 
         self.data_all = []
         for fn in self.filenames:
