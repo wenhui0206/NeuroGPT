@@ -1,0 +1,10 @@
+einops==0.7.0
+h5py==3.10.0
+numpy==1.26.4
+pandas==2.2.1
+scikit_learn==1.4.0
+scipy==1.12.0
+torch==2.2.0
+torchinfo==1.8.0
+tqdm==4.66.2
+transformers==4.38.1
