@@ -12,14 +12,13 @@ We propose Neuro-GPT, a foundation model consisting of an EEG encoder and a GPT 
 ## Installation
 ```console
 git clone git@github.com:wenhui0206/NeuroGPT.git
+pip install -r requirements.txt
 cd NeuroGPT/scripts
 ./train.sh
 ```
 
 ## Requirements
-- Python 3.10
-- Pytorch 2.2
-- Transformers 4.38
+pip install -r requirements.txt
 
 ## Datasets
 - [TUH EEG Corpus](https://isip.piconepress.com/projects/tuh_eeg/html/downloads.shtml#c_tueg)
