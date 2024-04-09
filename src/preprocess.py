@@ -1,4 +1,5 @@
 import argparse
+from glob import glob
 import logging
 import os
 from pathlib import Path
@@ -8,6 +9,47 @@ import numpy as np
 import pandas as pd
 from scipy.signal import detrend
 import torch
+
+def generate_normalized_names(channel_names):
+    """
+    Generate a dictionary to map original EEG channel names to their normalized
+    names based on the standard 10-20 system naming convention, ensuring
+    proper case (e.g., 'Fp1' instead of 'FP1').
+
+    Parameters:
+    - channel_names: list of str, original channel names from the EEG file.
+
+    Returns:
+    - dict: A dictionary where keys are original channel names and values are
+            the corresponding normalized names in proper case.
+    """
+    prefix_removal = "EEG "
+    suffix_removals = ["-REF", "-LE"]
+    
+    # Mapping of upper case to proper case for the 10-20 system
+    proper_case_mapping = {
+        'FP1': 'Fp1', 'FP2': 'Fp2',
+        'F7': 'F7', 'F3': 'F3', 'FZ': 'Fz', 'F4': 'F4', 'F8': 'F8',
+        'T1': 'T1', 'T3': 'T3', 'C3': 'C3', 'CZ': 'Cz', 'C4': 'C4', 'T4': 'T4', 'T2': 'T2',
+        'T5': 'T5', 'P3': 'P3', 'PZ': 'Pz', 'P4': 'P4', 'T6': 'T6',
+        'O1': 'O1', 'OZ': 'Oz', 'O2': 'O2',
+    }
+    
+    normalized_names = {}
+    for name in channel_names:
+        name_short = name
+        # Remove the 'EEG ' prefix and any '-REF' or '-LE' suffix
+        for suffix in suffix_removals:
+            name_short = name_short.replace(suffix, '')
+        name_short = name_short.replace(prefix_removal, '')
+        
+        # Convert to proper case based on the 10-20 system
+        normalized_name = proper_case_mapping.get(name_short.upper())
+        
+        # Map the original name to the normalized name
+        normalized_names[name] = normalized_name
+        
+    return normalized_names
 
 def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T1', 'T3', 'C3', 'Cz', 'C4', 'T4', 'T2', 'T5', 'P3', 'Pz', 'P4', 'T6', 'O1', 'Oz', 'O2']):
     # Load the EDF file
@@ -20,7 +62,7 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
     channels_formatted = [f'EEG {ch.upper()}-{ch_suffixes[0]}' for ch in channels]
     missing_channels = list(set(channels_formatted)-set(raw.info['ch_names']))
     if len(missing_channels):
-        logger.info(f"Absent channels {missing_channels} in available channels: \n{raw.info['ch_names']}")
+        logger.info(f"Missing channels {missing_channels} in available channels: \n{raw.info['ch_names']}")
 
     if missing_channels:
         logger.info(f"Available channels: \n{raw.info['ch_names']}\nAdding missing channels {missing_channels} with zero values...")
@@ -35,11 +77,14 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
         
         # Mark the newly added channels as bad
         raw.info['bads'].extend(missing_channels)
+    # Ensure the specified channels are in the correct order
+    raw.reorder_channels(channels_formatted)
 
-
-    raw.pick_channels(channels, ordered=False)
+    logger.info("Selecting the 22 channels...")
+    raw.pick_channels(channels_formatted, ordered=False)
 
     # Identify bad channels (zero or missing signals)
+    logger.info("Identifying bad channels...")
     bad_channels = []
     for ch_name in channels_formatted:
         data, _ = raw[ch_name]
@@ -48,7 +93,40 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
 
     raw.info['bads'] = bad_channels
 
+    # Rename channels in the raw object
+    normalized_names = generate_normalized_names(raw.info['ch_names'])
+    raw.rename_channels(normalized_names)
+    # Set montage (assuming 10-20 system)
+    montage = mne.channels.make_standard_montage('standard_1020')
+    # remove channels not present in the 10-20 system
+    drop_channels = [ch for ch in raw.info['ch_names'] if ch not in montage.ch_names]
+    raw.drop_channels(drop_channels)
+    # raw.set_montage(montage, match_case=False, on_missing='ignore')
+    raw.set_montage(montage, match_case=False)
+    
     # Interpolate bad channels (This is a simplified approach)
+    logger.info("Interpolating bad channels...")
+
+    # # Normalize the names for comparison (e.g., case insensitive)
+    # dataset_channel_names = raw.info['ch_names']
+    # montage_channel_names = montage.ch_names
+    # # dataset_channel_names_normalized = [name.upper() for name in dataset_channel_names]
+    # # montage_channel_names_normalized = [name.upper() for name in montage_channel_names]
+
+    # # Find channels in your dataset not present in the standard montage
+    # # not_in_montage = [name for name in dataset_channel_names_normalized if name not in montage_channel_names_normalized]
+    # not_in_montage = [name for name in dataset_channel_names if name not in montage_channel_names]
+
+    # # Find channels in the standard montage not present in your dataset
+    # # not_in_dataset = [name for name in montage_channel_names_normalized if name not in dataset_channel_names_normalized]
+    # not_in_dataset = [name for name in montage_channel_names if name not in dataset_channel_names]
+
+    # logger.info(f"Channels in dataset not in standard_1020 montage: {not_in_montage}")
+    # logger.info(f"Channels in standard_1020 montage not in dataset: {not_in_dataset}")
+    # logger.info(f"Mutual channels: {set(dataset_channel_names) & set(montage_channel_names)}")
+
+    logger.info(f"Annotations: {raw.annotations}")
+
     if bad_channels:
         logger.info(f"Processing bad channels: {bad_channels}")
         raw.interpolate_bads(reset_bads=True)
@@ -75,29 +153,41 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
 
     return raw
 
-def process_file(edf_file, export_path, logger):
+def process_file(edf_file, export_path, file_prefix):
     logger.info(f"Processing {edf_file}")
     try:
         preprocessed_data = preprocess_eeg(str(edf_file))
         data_tensor = torch.tensor(preprocessed_data.get_data())
-        file_name = f"{edf_file.stem}_preprocessed.pt"
-        torch.save(data_tensor, export_path / file_name)
-        logger.info(f"Saved {file_name} successfully.")
+        # define the new filename
+        # parts = edf_file.parts
+        # subject = parts[-5]  # e.g., '005'
+        # recording_type = parts[-2]  # e.g., '01_tcp_ar'
+        # edf_stem = edf_file.stem
+        # new_filename = f"{subject}_{recording_type}_{edf_stem}_preprocessed.pt"
+        new_filename = f"{file_prefix}_{edf_file.stem}_preprocessed.pt"
+        # Base export directory
+        export_dir = Path(args.export_dir)
+        # Full path for the preprocessed file
+        # torch.save(data_tensor, export_path / file_name)
+        torch.save(data_tensor, export_dir / new_filename)
+        logger.info(f"Saved {new_filename} successfully.")
     except Exception as e:
-        logger.error(f"Error processing {edf_file}: {e}")
+        raise e
+        # logger.error(f"Error processing {edf_file}: {e}")
 
-def process_subject(subject_path, export_path, filenames_to_process, logger):
+def process_subject(subject_path, export_path, filenames_to_process, file_prefix):
     for edf_file in subject_path.rglob('*.edf'):
         preprocessed_file_name = f"{edf_file.stem}_preprocessed.pt"
         if preprocessed_file_name in filenames_to_process:
             logger.info(f"Original file exists: {preprocessed_file_name}.")
             # print(f"Original file exists: {preprocessed_file_name}.")
-            process_file(edf_file, export_path, logger)
+            process_file(edf_file, export_path, file_prefix)
         # else:
         #     print(f"Original file does not exist: {preprocessed_file_name}.")
 
-def process_and_save(args, logger):
+def process_and_save(args):
     data_root, export_dir, filename_csv = args.data_root, args.export_dir, args.filename_csv
+    os.makedirs(export_dir, exist_ok=True)
     # filename format: tuh/tueg/edf/000/aaaaaaaa/s001_2015/01_tcp_ar/aaaaaaaa_s001_t000.edf
     # processed filename format: 000_01_tcp_ar_aaaaaaaa_s001_t000_preprocessed.pt
     data_root_path = Path(data_root)
@@ -107,19 +197,22 @@ def process_and_save(args, logger):
     subject_nums = filenames_df["filename"].apply(lambda x: x.split('_')[0]).unique().tolist()
     filenames_to_process = set(filenames_df['filename_suffix'].tolist())
 
-    # print(subject_nums)
-    # print(os.listdir(data_root_path))
-    # exit()
     for subject_num in os.listdir(data_root_path):
         if subject_num not in subject_nums:
+            logger.info(f"Skipping subject #{subject_num}")
             continue
         subject_path = data_root_path / subject_num
         # Adapted pattern to match 'sNNN_YYYY'
         for session_dir in subject_path.rglob('s*_*'):
             if session_dir.is_dir():
-                export_path = export_root_path / f"{subject_num}_{session_dir.stem}"
-                export_path.mkdir(parents=True, exist_ok=True)
-                process_subject(session_dir, export_path, filenames_to_process, logger)
+                logger.info(f"Processing {session_dir}...")
+                logger.info(f"subject num: {subject_num}")
+                logger.info(f"session dir: {session_dir}")
+                child_dirs = glob(str(session_dir)+'//*')
+                assert len(child_dirs)==1, f"Multiple child dirs found: {child_dirs}"
+                session_type = child_dirs[0].split('/')[-1]
+                file_prefix = f"{subject_num}_{session_type}"
+                process_subject(session_dir, export_root_path, filenames_to_process, file_prefix)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess EEG data.")
@@ -133,4 +226,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    process_and_save(args, logger)
+    process_and_save(args)
