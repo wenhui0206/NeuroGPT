@@ -51,7 +51,7 @@ def generate_normalized_names(channel_names):
         
     return normalized_names
 
-def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T1', 'T3', 'C3', 'Cz', 'C4', 'T4', 'T2', 'T5', 'P3', 'Pz', 'P4', 'T6', 'O1', 'Oz', 'O2']):
+def preprocess_eeg(edf_file, logger, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T1', 'T3', 'C3', 'Cz', 'C4', 'T4', 'T2', 'T5', 'P3', 'Pz', 'P4', 'T6', 'O1', 'Oz', 'O2']):
     # Load the EDF file
     raw = mne.io.read_raw_edf(edf_file, preload=True)
     # raw = mne.io.read_raw_edf(edf_file, preload=False, verbose='error')
@@ -77,6 +77,7 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
         
         # Mark the newly added channels as bad
         raw.info['bads'].extend(missing_channels)
+
     # Ensure the specified channels are in the correct order
     raw.reorder_channels(channels_formatted)
 
@@ -99,10 +100,27 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
     # Set montage (assuming 10-20 system)
     montage = mne.channels.make_standard_montage('standard_1020')
     # remove channels not present in the 10-20 system
+
+    # logger.info(f"Channels in montage: {sorted(montage.ch_names)}")
+
     drop_channels = [ch for ch in raw.info['ch_names'] if ch not in montage.ch_names]
+    logger.info(f"Dropping channels: {drop_channels}")
+
+    # proper_case_mapping = {
+    #     'FP1': 'Fp1', 'FP2': 'Fp2',
+    #     'F7': 'F7', 'F3': 'F3', 'FZ': 'Fz', 'F4': 'F4', 'F8': 'F8',
+    #     'T1': 'T1', 'T3': 'T3', 'C3': 'C3', 'CZ': 'Cz', 'C4': 'C4', 'T4': 'T4', 'T2': 'T2',
+    #     'T5': 'T5', 'P3': 'P3', 'PZ': 'Pz', 'P4': 'P4', 'T6': 'T6',
+    #     'O1': 'O1', 'OZ': 'Oz', 'O2': 'O2',
+    # }
+    # logger.info(f"Channels in proper case but not in 10-20 system: {set([ch for ch in proper_case_mapping.values() if ch not in montage.ch_names])}")
+    # chann_labels = {'Fp1': 0, 'Fp2': 1, 'F3': 2, 'F4': 3, 'C3': 4, 'C4': 5, 'P3': 6, 'P4': 7, 'O1': 8, 'O2': 9, 'F7': 10, 'F8': 11, 'T3': 12, 'T4': 13, 'T5': 14, 'T6': 15, 'Fz': 16, 'Cz': 17, 'Pz': 18, 'Oz': 19, 'T1': 20, 'T2': 21}
+    # reorder_labels = {'Fp1': 0, 'Fp2': 1, 'F7': 2, 'F3': 3, 'Fz': 4, 'F4': 5, 'F8': 6, 'T1': 7, 'T3': 8, 'C3': 9, 'Cz': 10, 'C4': 11, 'T4': 12, 'T2': 13, 'T5': 14, 'P3': 15, 'Pz': 16, 'P4': 17, 'T6': 18, 'O1': 19, 'Oz': 20, 'O2': 21}
+    # logger.info(f"Channels in channel labels but not in current data: {set([ch for ch in chann_labels.keys() if ch not in raw.info['ch_names']])}")
+    # logger.info(f"Channels in reorder labels but not in current data: {set([ch for ch in reorder_labels.keys() if ch not in raw.info['ch_names']])}")
+
     raw.drop_channels(drop_channels)
     raw.set_montage(montage, match_case=False)
-    
     # Interpolate bad channels (This is a simplified approach)
     logger.info("Interpolating bad channels...")
     if bad_channels:
@@ -131,7 +149,7 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
 
     return raw
 
-def process_file(edf_file, export_path, file_prefix):
+def process_file(edf_file, file_prefix):
     logger.info(f"Processing {edf_file}")
     # Base export directory
     export_dir = Path(args.export_dir)
@@ -150,12 +168,12 @@ def process_file(edf_file, export_path, file_prefix):
         # raise e
         logger.error(f"Error processing {edf_file}: {e}")
 
-def process_subject(subject_path, export_path, filenames_to_process, file_prefix):
+def process_subject(subject_path, filenames_to_process, file_prefix):
     for edf_file in subject_path.rglob('*.edf'):
         preprocessed_file_name = f"{edf_file.stem}_preprocessed.pt"
         if preprocessed_file_name in filenames_to_process:
             logger.info(f"Original file exists: {preprocessed_file_name}.")
-            process_file(edf_file, export_path, file_prefix)
+            process_file(edf_file, file_prefix)
         else:
             print(f"Original file does not exist: {preprocessed_file_name}.")
 

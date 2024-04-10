@@ -259,13 +259,13 @@ def make_model(model_config: Dict=None):
     if model_config["use_encoder"] == True:
         chann_coords = None
         
-        encoder = EEGConformer(n_outputs=model_config["num_decoding_classes"], n_chans=22, n_times=model_config['chunk_len'], ch_pos=chann_coords, is_decoding_mode=model_config["ft_only_encoder"])
+        encoder = EEGConformer(n_outputs=model_config["num_decoding_classes"], n_chans=model_config["num_channels"], n_times=model_config['chunk_len'], ch_pos=chann_coords, is_decoding_mode=model_config["ft_only_encoder"])
         #calculates the output dimension of the encoder, which is the output of transformer layer.
         model_config["parcellation_dim"] = ((model_config['chunk_len'] - model_config['filter_time_length'] + 1 - model_config['pool_time_length']) // model_config['stride_avg_pool'] + 1) * model_config['n_filters_time']
 
     else:
         encoder = None
-        model_config["parcellation_dim"] = model_config["chunk_len"] * 22
+        model_config["parcellation_dim"] = model_config["chunk_len"] * model_config["num_channels"]
 
     embedder = make_embedder(
         training_style=model_config["training_style"],
@@ -636,6 +636,13 @@ def get_args() -> argparse.ArgumentParser:
         help='number of decoding classes (ie., mental states) in --data '
              '(default: 0). '
              '! Must be specified when setting --training-style to "decoding"'
+    )
+    parser.add_argument(
+        '--num-channels',
+        metavar='INT',
+        default=22,
+        type=int,
+        help='Number of channels in EEG data'
     )
     parser.add_argument(
         '--training-steps',
