@@ -54,7 +54,7 @@ def generate_normalized_names(channel_names):
 def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T1', 'T3', 'C3', 'Cz', 'C4', 'T4', 'T2', 'T5', 'P3', 'Pz', 'P4', 'T6', 'O1', 'Oz', 'O2']):
     # Load the EDF file
     raw = mne.io.read_raw_edf(edf_file, preload=True)
-    # print(raw.info.ch_names)
+    # raw = mne.io.read_raw_edf(edf_file, preload=False, verbose='error')
     
     # Select the 22 channels based on the extended international 10-20 system
     ch_suffixes = [ch.split("-")[-1] for ch in raw.info['ch_names'] if ch.endswith("LE") or ch.endswith("REF")]
@@ -101,32 +101,10 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
     # remove channels not present in the 10-20 system
     drop_channels = [ch for ch in raw.info['ch_names'] if ch not in montage.ch_names]
     raw.drop_channels(drop_channels)
-    # raw.set_montage(montage, match_case=False, on_missing='ignore')
     raw.set_montage(montage, match_case=False)
     
     # Interpolate bad channels (This is a simplified approach)
     logger.info("Interpolating bad channels...")
-
-    # # Normalize the names for comparison (e.g., case insensitive)
-    # dataset_channel_names = raw.info['ch_names']
-    # montage_channel_names = montage.ch_names
-    # # dataset_channel_names_normalized = [name.upper() for name in dataset_channel_names]
-    # # montage_channel_names_normalized = [name.upper() for name in montage_channel_names]
-
-    # # Find channels in your dataset not present in the standard montage
-    # # not_in_montage = [name for name in dataset_channel_names_normalized if name not in montage_channel_names_normalized]
-    # not_in_montage = [name for name in dataset_channel_names if name not in montage_channel_names]
-
-    # # Find channels in the standard montage not present in your dataset
-    # # not_in_dataset = [name for name in montage_channel_names_normalized if name not in dataset_channel_names_normalized]
-    # not_in_dataset = [name for name in montage_channel_names if name not in dataset_channel_names]
-
-    # logger.info(f"Channels in dataset not in standard_1020 montage: {not_in_montage}")
-    # logger.info(f"Channels in standard_1020 montage not in dataset: {not_in_dataset}")
-    # logger.info(f"Mutual channels: {set(dataset_channel_names) & set(montage_channel_names)}")
-
-    logger.info(f"Annotations: {raw.annotations}")
-
     if bad_channels:
         logger.info(f"Processing bad channels: {bad_channels}")
         raw.interpolate_bads(reset_bads=True)
@@ -155,35 +133,31 @@ def preprocess_eeg(edf_file, channels = ['FP1', 'FP2', 'F7', 'F3', 'Fz', 'F4', '
 
 def process_file(edf_file, export_path, file_prefix):
     logger.info(f"Processing {edf_file}")
+    # Base export directory
+    export_dir = Path(args.export_dir)
+    # define the new filename
+    new_filename = f"{file_prefix}_{edf_file.stem}_preprocessed.pt"
+    if os.path.isfile(export_dir / new_filename):
+        logger.info(f"File already processed. Skipping {new_filename}")
+        return
     try:
         preprocessed_data = preprocess_eeg(str(edf_file))
         data_tensor = torch.tensor(preprocessed_data.get_data())
-        # define the new filename
-        # parts = edf_file.parts
-        # subject = parts[-5]  # e.g., '005'
-        # recording_type = parts[-2]  # e.g., '01_tcp_ar'
-        # edf_stem = edf_file.stem
-        # new_filename = f"{subject}_{recording_type}_{edf_stem}_preprocessed.pt"
-        new_filename = f"{file_prefix}_{edf_file.stem}_preprocessed.pt"
-        # Base export directory
-        export_dir = Path(args.export_dir)
         # Full path for the preprocessed file
-        # torch.save(data_tensor, export_path / file_name)
         torch.save(data_tensor, export_dir / new_filename)
         logger.info(f"Saved {new_filename} successfully.")
     except Exception as e:
-        raise e
-        # logger.error(f"Error processing {edf_file}: {e}")
+        # raise e
+        logger.error(f"Error processing {edf_file}: {e}")
 
 def process_subject(subject_path, export_path, filenames_to_process, file_prefix):
     for edf_file in subject_path.rglob('*.edf'):
         preprocessed_file_name = f"{edf_file.stem}_preprocessed.pt"
         if preprocessed_file_name in filenames_to_process:
             logger.info(f"Original file exists: {preprocessed_file_name}.")
-            # print(f"Original file exists: {preprocessed_file_name}.")
             process_file(edf_file, export_path, file_prefix)
-        # else:
-        #     print(f"Original file does not exist: {preprocessed_file_name}.")
+        else:
+            print(f"Original file does not exist: {preprocessed_file_name}.")
 
 def process_and_save(args):
     data_root, export_dir, filename_csv = args.data_root, args.export_dir, args.filename_csv
