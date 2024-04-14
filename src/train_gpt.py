@@ -162,12 +162,12 @@ def train(config: Dict=None) -> Trainer:
         train_dataset = EEGDataset(files[1000:], sample_keys=[
             'inputs',
             'attention_mask'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"], tensor_type=config["tensor_export_type"])
 
         validation_dataset = EEGDataset(files[:1000], sample_keys=[
             'inputs',
             'attention_mask'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"], tensor_type=config["tensor_export_type"])
 
         test_dataset = None
 
@@ -980,6 +980,16 @@ def get_args() -> argparse.ArgumentParser:
         help='finetune with only encoder or not '
              '(default: False) '
     )
+
+    ## storage settings
+    parser.add_argument(
+        '--tensor-export-type',
+        default='.pt.gz',
+        type=str,
+        choices=('.pt.gz', '.pt'),
+        help='File extension of tensor files (default: .pt.gz)'
+    )
+
 
     return parser
 

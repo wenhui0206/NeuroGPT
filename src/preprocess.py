@@ -1,5 +1,6 @@
 import argparse
 from glob import glob
+import gzip
 import logging
 import os
 from pathlib import Path
@@ -162,7 +163,8 @@ def process_file(edf_file, file_prefix):
         preprocessed_data = preprocess_eeg(str(edf_file))
         data_tensor = torch.tensor(preprocessed_data.get_data())
         # Full path for the preprocessed file
-        torch.save(data_tensor, export_dir / new_filename)
+        with gzip.open(export_dir / f"{new_filename}.gz", 'wb') as f:
+            torch.save(data_tensor, f)
         logger.info(f"Saved {new_filename} successfully.")
     except Exception as e:
         # raise e
