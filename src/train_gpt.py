@@ -162,12 +162,12 @@ def train(config: Dict=None) -> Trainer:
         train_dataset = EEGDataset(files[1000:], sample_keys=[
             'inputs',
             'attention_mask'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"], tensor_type=config["tensor_export_type"], exception_file="../inputs/failed_files.txt", n_chans=config["num_channels"])
 
         validation_dataset = EEGDataset(files[:1000], sample_keys=[
             'inputs',
             'attention_mask'
-        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"])
+        ], chunk_len=config["chunk_len"], num_chunks=config["num_chunks"], ovlp=config["chunk_ovlp"], root_path=root_path, gpt_only= not config["use_encoder"], normalization=config["do_normalization"], tensor_type=config["tensor_export_type"], exception_file="../inputs/failed_files.txt", n_chans=config["num_channels"])
 
         test_dataset = None
 
@@ -259,13 +259,13 @@ def make_model(model_config: Dict=None):
     if model_config["use_encoder"] == True:
         chann_coords = None
         
-        encoder = EEGConformer(n_outputs=model_config["num_decoding_classes"], n_chans=22, n_times=model_config['chunk_len'], ch_pos=chann_coords, is_decoding_mode=model_config["ft_only_encoder"])
+        encoder = EEGConformer(n_outputs=model_config["num_decoding_classes"], n_chans=model_config["num_channels"], n_times=model_config['chunk_len'], ch_pos=chann_coords, is_decoding_mode=model_config["ft_only_encoder"])
         #calculates the output dimension of the encoder, which is the output of transformer layer.
         model_config["parcellation_dim"] = ((model_config['chunk_len'] - model_config['filter_time_length'] + 1 - model_config['pool_time_length']) // model_config['stride_avg_pool'] + 1) * model_config['n_filters_time']
 
     else:
         encoder = None
-        model_config["parcellation_dim"] = model_config["chunk_len"] * 22
+        model_config["parcellation_dim"] = model_config["chunk_len"] * model_config["num_channels"]
 
     embedder = make_embedder(
         training_style=model_config["training_style"],
@@ -638,6 +638,14 @@ def get_args() -> argparse.ArgumentParser:
              '! Must be specified when setting --training-style to "decoding"'
     )
     parser.add_argument(
+        '--num-channels',
+        metavar='INT',
+        default=22,
+        choices=(22, 20),
+        type=int,
+        help='Number of channels in EEG data'
+    )
+    parser.add_argument(
         '--training-steps',
         metavar='INT',
         default=60000,
@@ -972,6 +980,14 @@ def get_args() -> argparse.ArgumentParser:
         type=str,
         help='finetune with only encoder or not '
              '(default: False) '
+    )
+    ## storage settings
+    parser.add_argument(
+        '--tensor-export-type',
+        default='.pt.gz',
+        type=str,
+        choices=('.pt.gz', '.pt'),
+        help='File extension of tensor files (default: .pt.gz)'
     )
 
     return parser
