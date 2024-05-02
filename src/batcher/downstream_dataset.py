@@ -19,7 +19,7 @@ class MotorImageryDataset(EEGDataset):
         self.labels_string2int = {'left': 0, 'right': 1,
                          'foot': 2, 'tongue':3 } #, 'unknown': -1
         self.Fs = 250  # 250Hz from original paper
-        self.P = np.load("tMatrix_value.npy")
+        self.P = np.load("../inputs/tMatrix_value.npy")
 
         self.trials, self.labels, self.num_trials_per_sub = self.get_trials_all()
         # keys of data ['s', 'etyp', 'epos', 'edur', 'artifacts']

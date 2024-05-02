@@ -1,5 +1,5 @@
 # NeuroGPT
-### Neuro-GPT: Towards a Foundation Model for EEG  [link to paper](https://arxiv.org/abs/2311.03764)
+### Neuro-GPT: Towards a Foundation Model for EEG  [paper](https://arxiv.org/abs/2311.03764)
 
 #### Published on IEEE - ISBI 2024
 
@@ -16,6 +16,7 @@ pip install -r requirements.txt
 cd NeuroGPT/scripts
 ./train.sh
 ```
+### Pre-trained foundation model available [here](https://huggingface.co/wenhuic/Neuro-GPT/tree/main)
 
 ## Requirements
 pip install -r requirements.txt
