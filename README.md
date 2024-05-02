@@ -4,6 +4,7 @@
 #### Published on IEEE - ISBI 2024
 
 We propose Neuro-GPT, a foundation model consisting of an EEG encoder and a GPT model. The foundation model is pre-trained on a large-scale data set using a self-supervised task that learns how to reconstruct masked EEG segments. We then fine-tune the model on a Motor Imagery Classification task to validate its performance in a low-data regime (9 subjects). Our experiments demonstrate that applying a foundation model can significantly improve classification performance compared to a model trained from scratch.
+### Pre-trained foundation model available [here](https://huggingface.co/wenhuic/Neuro-GPT/tree/main)
 <!-- 
 <picture>
 <source> -->
@@ -16,7 +17,6 @@ pip install -r requirements.txt
 cd NeuroGPT/scripts
 ./train.sh
 ```
-### Pre-trained foundation model available [here](https://huggingface.co/wenhuic/Neuro-GPT/tree/main)
 
 ## Requirements
 pip install -r requirements.txt
