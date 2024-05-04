@@ -1,5 +1,7 @@
+accelerate==0.27.2
 einops==0.7.0
 h5py==3.10.0
+mne==1.6.1
 numpy==1.26.4
 pandas==2.2.1
 scikit_learn==1.4.0

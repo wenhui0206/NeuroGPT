@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import gzip
+import logging
 from typing import Dict
 import numpy as np
 # import webdataset as wds
 import torch
-# import gzip
+import gzip
 # import pickle
 import h5py
 import os
@@ -32,14 +34,26 @@ def _pad_seq_right_to_n(
     )
 
 class EEGDataset(Dataset):
-    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, ovlp=50, root_path="", population_mean=0, population_std=1, gpt_only=False, normalization=True, start_samp_pnt=-1):
+    def __init__(self, filenames, sample_keys, chunk_len=500, num_chunks=10, ovlp=50, root_path="", population_mean=0, population_std=1, gpt_only=False, normalization=True, start_samp_pnt=-1, tensor_type=".pt", exception_file=None, n_chans=22):
         if root_path == "":
             self.filenames = filenames
         else:
-            self.filenames = [root_path + fn for fn in filenames if os.path.isfile(root_path+fn)]
+            # convert line of exception_file to file list
+            if exception_file is not None:
+                with open(exception_file, 'r') as f:
+                    # exception_files = f.readlines()
+                    exception_files = [line.strip() for line in f.readlines()]
+            else:
+                print("exception_file is None")
+                exception_files = []
+            self.filenames = [
+                f"{root_path}/{fn.split('.')[0]}{tensor_type}" 
+                for fn in filenames
+                if os.path.isfile(f"{root_path}/{fn.split('.')[0]}{tensor_type}")
+                and f"{root_path}/{fn.split('.')[0]}{tensor_type}" not in exception_files
+            ]
             self.root_path = root_path
             
-        print("Number of subjects loaded: ", len(self.filenames))
         # self.data = data_all
         self.chunk_len = chunk_len
         self.num_chunks = num_chunks
@@ -50,6 +64,8 @@ class EEGDataset(Dataset):
         self.do_normalization = normalization
         self.gpt_only=gpt_only
         self.start_samp_pnt = start_samp_pnt
+        self.tensor_type = tensor_type
+        self.n_chans = n_chans
 
     def __len__(self):
         return len(self.filenames)
@@ -86,12 +102,22 @@ class EEGDataset(Dataset):
 
     def load_tensor(self, filename):
         # tensor_fn = filename[:-3] + 'pt'
-        tensor_data = torch.load(filename)
+        if filename.endswith('.gz'):
+            with gzip.open(filename, 'rb') as f:
+                tensor_data = torch.load(f)
+        else:
+            tensor_data = torch.load(filename)
         return tensor_data.numpy()
 
     def reorder_channels(self, data):
-        chann_labels = {'FP1': 0, 'FP2': 1, 'F3': 2, 'F4': 3, 'C3': 4, 'C4': 5, 'P3': 6, 'P4': 7, 'O1': 8, 'O2': 9, 'F7': 10, 'F8': 11, 'T3': 12, 'T4': 13, 'T5': 14, 'T6': 15, 'FZ': 16, 'CZ': 17, 'PZ': 18, 'OZ': 19, 'T1': 20, 'T2': 21}
-        reorder_labels = {'FP1': 0, 'FP2': 1, 'F7': 2, 'F3': 3, 'FZ': 4, 'F4': 5, 'F8': 6, 'T1': 7, 'T3': 8, 'C3': 9, 'CZ': 10, 'C4': 11, 'T4': 12, 'T2': 13, 'T5': 14, 'P3': 15, 'PZ': 16, 'P4': 17, 'T6': 18, 'O1': 19, 'OZ': 20, 'O2': 21}
+        if self.n_chans == 22:
+            chann_labels = {'FP1': 0, 'FP2': 1, 'F3': 2, 'F4': 3, 'C3': 4, 'C4': 5, 'P3': 6, 'P4': 7, 'O1': 8, 'O2': 9, 'F7': 10, 'F8': 11, 'T3': 12, 'T4': 13, 'T5': 14, 'T6': 15, 'FZ': 16, 'CZ': 17, 'PZ': 18, 'OZ': 19, 'T1': 20, 'T2': 21}
+            reorder_labels = {'FP1': 0, 'FP2': 1, 'F7': 2, 'F3': 3, 'FZ': 4, 'F4': 5, 'F8': 6, 'T1': 7, 'T3': 8, 'C3': 9, 'CZ': 10, 'C4': 11, 'T4': 12, 'T2': 13, 'T5': 14, 'P3': 15, 'PZ': 16, 'P4': 17, 'T6': 18, 'O1': 19, 'OZ': 20, 'O2': 21}
+        elif self.n_chans == 20:
+            chann_labels = {'FP1': 0, 'FP2': 1, 'F3': 2, 'F4': 3, 'C3': 4, 'C4': 5, 'P3': 6, 'P4': 7, 'O1': 8, 'O2': 9, 'F7': 10, 'F8': 11, 'T3': 12, 'T4': 13, 'T5': 14, 'T6': 15, 'FZ': 16, 'CZ': 17, 'PZ': 18, 'OZ': 19}
+            reorder_labels = {'FP1': 0, 'FP2': 1, 'F7': 2, 'F3': 3, 'FZ': 4, 'F4': 5, 'F8': 6, 'T3': 7, 'C3': 8, 'CZ': 9, 'C4': 10, 'T4': 11, 'T5': 12, 'P3': 13, 'PZ': 14, 'P4': 15, 'T6': 16, 'O1': 17, 'OZ': 18, 'O2': 19}
+        else:
+            raise ValueError(f"Invalid number of channels: {self.n_chans}")
 
         reordered = np.zeros_like(data)
         for label, target_idx in reorder_labels.items():
