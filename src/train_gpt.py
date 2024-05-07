@@ -356,7 +356,7 @@ def make_model(model_config: Dict=None):
 def get_config(args: argparse.Namespace=None) -> Dict:
     """
     Make config from command line arguments (as created by get_args()).
-    Performs additional formating of args required for calling train().
+    Performs additional formatting of args required for calling train().
     """
 
     if args is None:
